@@ -141,21 +141,77 @@ print(bn.cv(usedf2, 'pc.stable', k = nrow(usedf2)) )
 print(bn.cv(usedf2, 'gs', k = nrow(usedf2)) )
 print(bn.cv(usedf2, 'iamb.fdr', k = nrow(usedf2)) )
 
-
-#run bayesian path model
-library(brms);library(rstan);options(mc.cores = parallel::detectCores());rstan_options(auto_write = TRUE)
-mod1 <- bf(Environmental.integrity ~ 1 + Legal.stability + Environmental.integrity.in.the.buffer.zone + s(lat, long))
-mod2 <- bf(Governance ~ 1 + Legal.stability + s(lat, long))
+#run gaussian model
+mod1 <- bf(Environmental.integrity  ~ 1 + Legal.stability + Environmental.integrity.in.the.buffer.zone + s(lat, long))
+mod2 <- bf(Governance ~ 1 + Legal.stability + s(lat, long) )
 mod3 <- bf(Absence.of.threats.due.to.infrastructure.projects ~ 1 + Territorial.integrity + s(lat, long))
 mod4 <- bf(Environmental.integrity.in.the.buffer.zone ~ 1 + Absence.of.threats.due.to.infrastructure.projects + s(lat, long))
 mod5 <- bf(Absence.of.pressure.from.infrastructure.projects ~ 1 + Absence.of.threats.due.to.infrastructure.projects + s(lat, long))
 mv <- mvbf( mod1 + mod2 + mod3 + mod4 + mod5,
             rescor=FALSE )
-m <- brm(data = df, #family = Beta(),
-      mv, prior = set_prior("normal(0,.1)", class = "b"), # group = ""),
-      iter =  1e4, chains = 4, cores = 4, #save_all_pars = TRUE,
-      control = list(adapt_delta = .999, max_treedepth = 20),
-      seed = 14, backend = "cmdstanr")
+m1 <- brm(data = df, 
+         mv, prior = set_prior("normal(0,.1)", class = "b"), # group = ""),
+         iter =  1e4, chains = 4, cores = 4, #save_all_pars = TRUE,
+         control = list(adapt_delta = .999, max_treedepth = 20),
+         seed = 1, backend = "cmdstanr")
+prior_summary(m1)
+m1
+pl <- plot(m1, N = 4, ask = FALSE) #Trace and Density Plots for MCMC Samples
+posterior_summary(m1)
+bayes_R2(m1) # 
+conditional_effects(m1, points=T)
+saveRDS(m1,"m1.Rds")
+m1 <- readRDS("m1.Rds") 
+#ranef(m1) pp_check(m1)
+plot(hypothesis(m1, "Governance_Legal.stability > 0"))
+
+
+
+#reverse code variables
+df$Legal.stability <- 1- df$Legal.stability
+df$Environmental.integrity <- 1- df$Environmental.integrity
+df$Territorial.integrity <- ifelse(df$Territorial.integrity == 1, .99, df$Territorial.integrity)
+df$Environmental.integrity.in.the.buffer.zone <- 1- df$Environmental.integrity.in.the.buffer.zone
+df$Territorial.integrity <- 1- df$Territorial.integrity
+df$Absence.of.threats.due.to.infrastructure.projects <- 1-df$Absence.of.threats.due.to.infrastructure.projects
+df$Absence.of.pressure.from.infrastructure.projects <- 1- df$Absence.of.pressure.from.infrastructure.projects
+df$Governance <- 1- df$Governance
+df$Governance <- ifelse(df$Governance == 1, .99, df$Governance)
+
+#run bayesian path model (zero inflated beta model)
+library(brms);library(rstan);options(mc.cores = parallel::detectCores());rstan_options(auto_write = TRUE)
+mod1 <- bf(Environmental.integrity  ~ 1 + Legal.stability + Environmental.integrity.in.the.buffer.zone + s(lat, long),
+           phi ~ 1 + Legal.stability + Environmental.integrity.in.the.buffer.zone+ s(lat, long),
+           zi ~ 1 + Legal.stability + Environmental.integrity.in.the.buffer.zone+ s(lat, long)
+           #coi ~ 1 + Legal.stability + Environmental.integrity.in.the.buffer.zone+ s(lat, long)
+)
+mod2 <- bf(Governance ~ 1 + Legal.stability + s(lat, long),
+           phi ~ 1 + Legal.stability + s(lat, long),
+           zi ~ 1 + Legal.stability + s(lat, long)
+           #coi ~ 1 + Legal.stability + s(lat, long) 
+)
+mod3 <- bf(Absence.of.threats.due.to.infrastructure.projects ~ 1 + Territorial.integrity + s(lat, long),
+           phi ~ 1 + Territorial.integrity + s(lat, long),
+           zi ~ 1 + Territorial.integrity + s(lat, long)
+           #coi ~ 1 + Territorial.integrity + s(lat, long)
+)
+mod4 <- bf(Environmental.integrity.in.the.buffer.zone ~ 1 + Absence.of.threats.due.to.infrastructure.projects + s(lat, long),
+           phi ~ 1 + Absence.of.threats.due.to.infrastructure.projects + s(lat, long),
+           zi ~ 1 + Absence.of.threats.due.to.infrastructure.projects + s(lat, long)
+           #coi ~ 1 + Absence.of.threats.due.to.infrastructure.projects + s(lat, long)
+)
+mod5 <- bf(Absence.of.pressure.from.infrastructure.projects ~ 1 + Absence.of.threats.due.to.infrastructure.projects + s(lat, long),
+           phi ~ 1 + Absence.of.threats.due.to.infrastructure.projects + s(lat, long),
+           zi ~ 1 + Absence.of.threats.due.to.infrastructure.projects + s(lat, long)
+           #coi ~ 1 + Absence.of.threats.due.to.infrastructure.projects + s(lat, long)
+)
+mv <- mvbf( mod1 + mod2 + mod3 + mod4 + mod5,
+            rescor=FALSE )
+m <- brm(data = df, family = zero_inflated_beta(), #https://mvuorre.github.io/posts/2019-02-18-analyze-analog-scale-ratings-with-zero-one-inflated-beta-models/
+         mv, #prior = set_prior("normal(0,.1)", class = "b"), # group = ""),
+         iter =  1e4, chains = 4, cores = 4, #save_all_pars = TRUE,
+         control = list(adapt_delta = .999, max_treedepth = 20),
+         seed = 10, backend = "cmdstanr")
 prior_summary(m)
 m
 pl <- plot(m, N = 4, ask = FALSE) #Trace and Density Plots for MCMC Samples
@@ -164,5 +220,6 @@ bayes_R2(m) #
 conditional_effects(m, points=T)
 saveRDS(m,"m.Rds")
 m <- readRDS("m.Rds") 
-#ranef(m)
+#ranef(m) pp_check(m)
+plot(hypothesis(m, "Governance_Legal.stability > 0"))
 
