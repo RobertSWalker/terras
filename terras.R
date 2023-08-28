@@ -54,7 +54,7 @@ ggmap::ggmap(gm1) +
   #geom_sf(data = merged[merged$River_Order > 7,], colour = "lightblue") +
   geom_point(data = df, aes(x = long, y = lat, 
                             fill=Environmental.integrity, 
-                            size = exp(area)) , 
+                            size = area) , 
              colour="black",pch=21, alpha = 1) +
   guides(size=guide_legend(title="Area (ha)", title.hjust = 0.5)) +
   #scale_fill_manual(values=c('green','blue', "gray50", "yellow", 'red'), name="Agricultural intensity") + 
