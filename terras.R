@@ -110,7 +110,7 @@ corrplot(res, type = "upper", order = "hclust",
 #boot = custom.strength(netlist, nodes = names(df[,c(2:8,11,12)]), cpdag = FALSE)
 
 boot <- boot.strength(df[,c(2:8)], R = 10001, cpdag = FALSE,
-                      algorithm = "mmhc") #, algorithm.args=list(blacklist=bl))
+                      algorithm = "tabu") #, algorithm.args=list(blacklist=bl))
 boot[boot$strength > 0.5 & boot$direction >= 0.5, ]
 avg.boot <- averaged.network(boot, threshold = .8)
 plot(boot)
