@@ -30,11 +30,11 @@ brms (paul-buerkner.github.io/brms/) is an `R` package that provides an interfac
 ## Phase 2 parameter learning example: bayesian path model with brms
 ```splus
 library(brms)
-mod1 <- bf(Environmental.integrity  ~ 1 + Legal.stability + Environmental.integrity.in.the.buffer.zone + s(lat, long))
-mod2 <- bf(Governance ~ 1 + Legal.stability + s(lat, long) )
-mod3 <- bf(Absence.of.threats.due.to.infrastructure.projects ~ 1 + Territorial.integrity + s(lat, long))
-mod4 <- bf(Environmental.integrity.in.the.buffer.zone ~ 1 + Absence.of.threats.due.to.infrastructure.projects + s(lat, long))
-mod5 <- bf(Absence.of.pressure.from.infrastructure.projects ~ 1 + Absence.of.threats.due.to.infrastructure.projects + s(lat, long))
+mod1 <- bf(Environmental.integrity  ~ 1 + Legal.stability + Environmental.integrity.in.the.buffer.zone + gp(lat, long, scale=F))
+mod2 <- bf(Governance ~ 1 + Legal.stability + gp(lat, long, scale=F))
+mod3 <- bf(Absence.of.threats.due.to.infrastructure.projects ~ 1 + Territorial.integrity + gp(lat, long, scale=F))
+mod4 <- bf(Environmental.integrity.in.the.buffer.zone ~ 1 + Absence.of.threats.due.to.infrastructure.projects + gp(lat, long, scale=F))
+mod5 <- bf(Absence.of.pressure.from.infrastructure.projects ~ 1 + Absence.of.threats.due.to.infrastructure.projects + gp(lat, long, scale=F))
 mv <- mvbf( mod1 + mod2 + mod3 + mod4 + mod5,
             rescor=FALSE )
 m1 <- brm(data = df, 
